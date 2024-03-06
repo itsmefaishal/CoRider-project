@@ -7,10 +7,19 @@ import {
   Text,
   Spacer,
   Input,
-  Button
+  Button,
+  Portal,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverBody,
 } from "@chakra-ui/react";
 import { LuSendHorizonal } from "react-icons/lu";
 import { GrAttachment } from "react-icons/gr";
+import { MdOutlineCameraAlt } from "react-icons/md";
+import { IoVideocamOutline } from "react-icons/io5";
+import { IoDocumentTextOutline } from "react-icons/io5";
+import { useState, useRef } from "react";
 
 interface Message {
   id: string;
@@ -29,6 +38,36 @@ interface ChatProps {
 }
 
 const ChatApp: React.FC<ChatProps> = ({ chats }) => {
+  const [popUp, setPopUp] = useState(false);
+  const [videoOn, setVideoOn] = useState(false);
+
+  const Camera = useRef<HTMLVideoElement>(null);
+
+  const handleCameraClick = async () => {
+    try {
+      if (videoOn) {
+        const stream = Camera.current?.srcObject as MediaStream;
+        const tracks = stream.getTracks();
+        tracks.forEach((track) => track.stop);
+
+        if (Camera.current) {
+          Camera.current.srcObject = null;
+        }
+      } else {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
+
+        if (Camera.current) {
+          Camera.current.srcObject = stream;
+        }
+      }
+
+      setVideoOn(true);
+    } catch (error) {
+      console.log("Error from the camera button : ", error);
+    }
+  };
 
   return (
     <VStack spacing={4} align="stretch" bg="#E5E5E0" pb={[11]} zIndex="1">
@@ -42,13 +81,15 @@ const ChatApp: React.FC<ChatProps> = ({ chats }) => {
           width={["100%", "80%", "60%", "40%"]}
         >
           <HStack alignItems={chat.sender.self ? "flex-end" : "flex-start"}>
-            {chat.sender.self ? null : (
-              <Avatar
-                width={["24px"]}
-                height={["24px"]}
-                src={chat.sender.image}
-              />
-            )}
+            <div>
+              {chat.sender.self ? null : (
+                <Avatar
+                  width={["24px"]}
+                  height={["24px"]}
+                  src={chat.sender.image}
+                />
+              )}
+            </div>
             <VStack
               p={[8]}
               align="start"
@@ -64,6 +105,13 @@ const ChatApp: React.FC<ChatProps> = ({ chats }) => {
           </HStack>
         </Box>
       ))}
+      <video
+        ref={Camera}
+        width="640px"
+        height="480px"
+        autoPlay
+        playsInline
+      ></video>
       <Box
         p={4}
         borderWidth="0px"
@@ -73,23 +121,58 @@ const ChatApp: React.FC<ChatProps> = ({ chats }) => {
         left="0"
         width="100%"
       >
-        <HStack height = '58px' bg={['white']} px={[2]} borderRadius={[4]}>
+        <HStack height="58px" bg={["white"]} px={[2]} borderRadius={[4]}>
           <Input
-            border='none'
+            border="none"
             p={[2]}
             bg={["white"]}
             placeholder="reply..."
-            variant='unstyled'
+            variant="unstyled"
           />
-          <Button 
-            variant='unstyled'
-            bg={['white']}
-          >
-            <HStack spacing={2}>
-                <GrAttachment />
-                <LuSendHorizonal />
-            </HStack>
-          </Button>
+          <HStack spacing={1}>
+            <Popover isOpen={popUp}>
+              <PopoverTrigger>
+                <Button
+                  variant="unstyled"
+                  bg={["white"]}
+                  onClick={() => setPopUp(!popUp)}
+                >
+                  <GrAttachment />
+                </Button>
+              </PopoverTrigger>
+              <Portal>
+                <PopoverContent
+                  zIndex={4}
+                  bg="white"
+                  borderColor="gray.200"
+                  borderWidth="1px"
+                  borderRadius="lg"
+                  p={2}
+                  width="12em"
+                  position="absolute"
+                  bottom="58px"
+                  right="0"
+                >
+                  <PopoverBody>
+                    <HStack spacing={[1]}>
+                      <Button colorScheme="blue">
+                        <MdOutlineCameraAlt />
+                      </Button>
+                      <Button colorScheme="blue" onClick={handleCameraClick}>
+                        <IoVideocamOutline />
+                      </Button>
+                      <Button colorScheme="blue">
+                        <IoDocumentTextOutline />
+                      </Button>
+                    </HStack>
+                  </PopoverBody>
+                </PopoverContent>
+              </Portal>
+            </Popover>
+            <Button variant="unstyled" bg={["white"]}>
+              <LuSendHorizonal />
+            </Button>
+          </HStack>
         </HStack>
       </Box>
     </VStack>
